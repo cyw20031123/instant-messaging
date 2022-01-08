@@ -23,8 +23,12 @@
 		},
 		methods: {
 			up(i) {
-				this.page = i[0];
-				this.name = i[1]
+				if(i instanceof Array){
+					this.page = i[0];
+					this.name = i[1]
+				}else{
+					this.page = i;
+				}
 			}
 		}
 	};

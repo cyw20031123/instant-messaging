@@ -24,7 +24,7 @@
 			signin() {
 				AV.User.logIn(this.name, this.password).then(
 					(user) => {
-						this.$emit("up",this.name);
+						this.$emit("up", this.name);
 					},
 					(error) => {
 						alert("账户或密码错误！￣へ￣");
@@ -48,7 +48,6 @@
 	.signin {
 		display: flex;
 		flex-direction: column;
-		align-items: flex-end;
 		height: 300px;
 		padding: 60px 40px 0 40px;
 	}
@@ -67,14 +66,12 @@
 		margin-bottom: 10px;
 	}
 
-	.input {
-		width: 100%;
-	}
-
 	.Forget {
 		margin-bottom: 30px;
 		cursor: pointer;
 		color: gray;
+		margin-left: auto;
+		width: fit-content;
 	}
 
 	.Forget:hover {

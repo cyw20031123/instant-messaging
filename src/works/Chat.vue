@@ -1,21 +1,27 @@
 <template>
-	<div class="page-section container-fluid text-center Chat">
+	<div class=" container-fluid text-center Chat">
 		<div id="Interface">
 			<div class="assembly">
-				<div class="button">
+				<div class="who">
 					<div>{{ who }}</div>
 				</div>
-				<div class="DisplayPanel">
-					<div :class="item[0] + ' information'" v-for="(item, key) in data" :key="key">
+				<div id="DisplayPanel" ref="chatbox">
+					<div :class="item[0]" class="information" v-for="(item, key) in data[subscript].data" :key="key">
 						{{ item[1] }}
 					</div>
 				</div>
-				<input class="input" placeholder="想聊什么呢？" type="text" v-model="input" @keyup.enter="get" />
+				<div id="InpuBox">
+					<input class="input" placeholder="说点什么吧!" type="text" v-model="input" @keyup.enter="get" />
+					<input type="button" class="btn btn-info" value="发送" />
+				</div>
 			</div>
 			<div id="GoodFriend">
-				<div class="name" @click="user(key)" v-for="(name,key) in username" :key="key">
-					{{ name }}
+				<div id="name">
+					<div :ref="key" class="name" @click="change(key)" v-for="(name,key) in username" :key="key">
+						{{ name }}
+					</div>
 				</div>
+				<input type="button" class="btn btn-danger button" @click="LogOut" value="退出登录" />
 			</div>
 		</div>
 	</div>
@@ -38,71 +44,187 @@
 		data() {
 			return {
 				input: "",
-				data: [],
-				who: "请选择一个好友",
-				username: []
+				data: [{
+					name: "选择一个用户开始聊天吧~",
+					data: [],
+				}],
+				who: "选择一个用户开始聊天吧~",
+				username: [],
+				Signin: "",
+				subscript: 0
 			};
 		},
 		methods: {
+			change(key) {
+				this.user(key).then(() => {
+					this.bottom();
+				})
+				let people = this.$refs[key];
+				people[0].className = "name";
+			},
 			user(key) {
 				this.who = this.username[key];
+				this.subscript = key + 1;
+				return Promise.resolve("true");
+			},
+			bottom() {
+				this.$refs.chatbox.scrollTop = 999999999;
 			},
 			get() {
-				if (this.who != "请选择一个好友") {
-					realtime.createIMClient(this.name).then((i) => {
-						// 创建与 Jerry 之间的对话
-						i.createConversation({
+				if (this.who != "选择一个用户开始聊天吧~") {
+					if (this.input !== "") {
+						// 创建对话
+						let input = this.input;
+						this.input = "";
+						this.Signin.createConversation({
 							members: [this.who],
 							// 对话名称
-							name: this.nema + ' & ' + this.who,
+							name: this.name + ' & ' + this.who,
 							unique: true
 						}).then((i) => {
-							i.send(new TextMessage(this.input)).then((message) => {
-								this.data.push(["user", message.text]);
-								console.log('发送成功！');
+							i.send(new TextMessage(input)).then((message) => {
+								for (let who of this.data) {
+									if (who.name == this.who) {
+										who.data.push(["user", message.text]);
+										setTimeout(() => {
+											this.bottom();
+										}, 10);
+									}
+								}
 							}).catch(() => {
 								alert("发送失败啦！");
 							});
 						});
-					});
+					}
 				} else {
 					alert("请选择一个用户开始通讯哦")
 				}
 			},
+			LogOut() {
+				//用户退出登录
+				AV.User.logOut();
+				this.Signin.close().then(function() {});
+				this.$emit("up", "SignIn");
+			}
 		},
 		mounted() {
-			// Jerry 登录
-			realtime.createIMClient(this.name).then((jerry) => {
-				jerry.on(Event.INVITED, function invitedEventHandler(payload, conversation) {
-					console.log(payload.invitedBy, conversation.id);
-					console.log(conversation);
-				});
-				jerry.on(Event.MESSAGE, (message, conversation) => {
-					this.data.push(["reply", message.text,message.from]);
-				});
-			}).catch(console.error);
+			//获取所有其他用户
 			const name = new AV.Query("UserName");
 			name.find().then((names) => {
 				for (const i of names) {
-					if (i.attributes.name != this.name) {
-						this.username.push(i.attributes.name);
+					let n = i.attributes.name;
+					if (n != this.name) {
+						this.username.push(n);
+						this.data.push({
+							name: n,
+							data: []
+						});
 					}
 				}
+			});
+			//用户登录
+			realtime.createIMClient(this.name).then((i) => {
+				this.Signin = i;
+				//获取历史消息
+				var query = i.getQuery();
+				query.contains('name', this.name);
+				query.find().then((conversations) => {
+					conversations.map((a) => {
+						var names = a.members;
+						var name;
+						for (let s of names) {
+							if (s !== this.name) {
+								name = s;
+							}
+						}
+						a.queryMessages({
+							limit: 100, // limit 取值范围 1~100，默认 20
+						}).then((messages) => {
+							// 最新的100条消息，按时间增序排列
+							for (let n = 0; n < this.data.length; n++) {
+								if (this.data[n].name == name) {
+									for (let i = 0; i < messages.length; i++) {
+										if (messages[i].from == this.name) {
+											this.data[n].data.push(["user", messages[i]
+												.text
+											]);
+										} else {
+											this.data[n].data.push(["reply", messages[i]
+												.text
+											]);
+										}
+									}
+								}
+							}
+						});
+					});
+				});
+			});
+			//时刻接收信息
+			realtime.createIMClient(this.name).then((jerry) => {
+				jerry.on(Event.INVITED, function invitedEventHandler(payload, conversation) {});
+				jerry.on(Event.MESSAGE, (message, conversation) => {
+					for (let who of this.data) {
+						if (who.name == message.from) {
+							who.data.push(["reply", message.text]);
+							setTimeout(() => {
+								this.bottom();
+							}, 10);
+							for (let i = 0; i < this.username.length; i++) {
+								if (who.name === this.username[i] && this.who != who.name) {
+									let people = this.$refs[i];
+									people[0].className = "received";
+								}
+							}
+						}
+					}
+				});
 			});
 		},
 	};
 </script>
 
 <style scoped>
+	@keyframes twinkle {
+		0% {
+			background-color: none;
+		}
+
+		50% {
+			background-color: rgba(243, 89, 89, 0.5);
+		}
+
+		100% {
+			background-color: none;
+		}
+	}
+
+	.received {
+		animation-name: twinkle;
+		animation-duration: 1s;
+		animation-iteration-count: infinite;
+		padding: 8px 0;
+		border-top: 1px solid white;
+		border-radius: 3px;
+		cursor: progress;
+		color: wheat;
+	}
+
 	.Chat {
-		width: 600px;
-		padding-bottom: 0;
+		height: 100vh;
+		width: 100%;
+		padding: 0;
+	}
+
+	#InpuBox {
+		display: flex;
+		flex-direction: row;
 	}
 
 	#Interface {
+		height: 100%;
 		display: flex;
 		flex-direction: row;
-		border-radius: 3px;
 		background: linear-gradient(to bottom,
 				rgba(27, 27, 27, 0.3) 0%,
 				rgba(27, 27, 27, 0.3) 100%),
@@ -114,38 +236,29 @@
 	}
 
 	.assembly {
+		height: 100%;
 		width: calc(100% - 100px);
-		padding: 10px;
-		border: 1px solid gray;
+		padding: 20px;
 	}
 
-	@media screen and (max-width: 640px) {
-		.Chat {
-			width: calc(100% - 40px);
-		}
-	}
-
-	.button {
+	.who {
 		color: white;
 	}
 
-	.DisplayPanel {
+	#DisplayPanel {
+		height: calc(100% - 78px);
 		padding: 20px;
 		margin-bottom: 10px;
-		height: 300px;
 		overflow: auto;
-	}
-
-	.DisplayPanel::-webkit-scrollbar {
-		display: none;
 	}
 
 	.input {
 		padding-left: 10px;
+		height: 40px;
 		width: 100%;
 		border: 1px solid gray;
 		outline: none;
-		border-radius: 10px;
+		border-radius: 4px;
 		background-color: rgba(255, 255, 255, 0.8);
 	}
 
@@ -168,18 +281,54 @@
 	}
 
 	#GoodFriend {
+		height: 100%;
 		width: 100px;
-		padding: 20px 10px;
+		padding: 20px 0;
+		border-left: 1.5px solid white;
 	}
+
+	#name {
+		height: calc(100% - 32px);
+		overflow: auto;
+	}
+
+	#name::-webkit-scrollbar {
+		display: none;
+	}
+
+	#DisplayPanel::-webkit-scrollbar-track {
+		-webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+		background-color: #dbdbdb;
+		border-radius: 10px;
+	}
+
+	#DisplayPanel::-webkit-scrollbar {
+		width: 6px;
+		background-color: #F5F5F5;
+		border-radius: 10px;
+	}
+
+	#DisplayPanel::-webkit-scrollbar-thumb {
+		background-color: #8f8f8f;
+		border-radius: 10px;
+	}
+
+
+
 	.name {
-		padding:5px 0;
-		border-bottom: 1px solid white;
+		padding: 8px 0;
+		border-top: 1px solid white;
+		border-radius: 3px;
 		cursor: progress;
 		color: wheat;
 		transition: background-color .2s linear;
 	}
-	.name:hover{
-		background-color: #597ca1;
-		
+
+	.name:hover {
+		background-color: rgba(89, 156, 243, 0.3);
+	}
+
+	.button {
+		font-size: .5em;
 	}
 </style>
