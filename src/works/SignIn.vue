@@ -56,7 +56,7 @@
 		background: linear-gradient(to bottom,
 				rgba(129, 129, 129, 0.3) 0%,
 				rgba(136, 136, 136, 0.3) 100%),
-			url("../../public/assets/img/background-4.jpg");
+			url("../../public/img/background-4.jpg");
 		background-position: top;
 		background-repeat: no-repeat;
 		background-attachment: scroll;

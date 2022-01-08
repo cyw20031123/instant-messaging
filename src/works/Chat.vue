@@ -11,8 +11,8 @@
 					</div>
 				</div>
 				<div id="InpuBox">
-					<input class="input" placeholder="说点什么吧!" type="text" v-model="input" @keyup.enter="get" />
-					<input type="button" class="btn btn-info" value="发送" />
+					<input class="input" placeholder="说点什么吧!" type="text" v-model="input" @keyup.enter="get()" />
+					<input type="button" class="btn btn-info" value="发送" @click="get()" />
 				</div>
 			</div>
 			<div id="GoodFriend">
@@ -21,7 +21,7 @@
 						{{ name }}
 					</div>
 				</div>
-				<input type="button" class="btn btn-danger button" @click="LogOut" value="退出登录" />
+				<input type="button" class="btn btn-danger button" @click="LogOut()" value="退出登录" />
 			</div>
 		</div>
 	</div>
@@ -228,7 +228,7 @@
 		background: linear-gradient(to bottom,
 				rgba(27, 27, 27, 0.3) 0%,
 				rgba(27, 27, 27, 0.3) 100%),
-			url("../../public/assets/img/background-6.jpg");
+			url("../../public/img/background-6.jpg");
 		background-position: center;
 		background-repeat: no-repeat;
 		background-attachment: scroll;
@@ -256,10 +256,15 @@
 		padding-left: 10px;
 		height: 40px;
 		width: 100%;
-		border: 1px solid gray;
+		border: none;
 		outline: none;
 		border-radius: 4px;
 		background-color: rgba(255, 255, 255, 0.8);
+		margin-right: 10px;
+	}
+	
+	.input:focus{
+		background-color: rgba(255, 255, 255, 1);
 	}
 
 	.reply {
@@ -312,8 +317,6 @@
 		background-color: #8f8f8f;
 		border-radius: 10px;
 	}
-
-
 
 	.name {
 		padding: 8px 0;
